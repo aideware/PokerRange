@@ -23,9 +23,9 @@
       gap: 10px;
     }
     .grid-title {
-  font-size: 1.2rem;
-  color: #ccc;
-}
+      font-size: 1.2rem;
+      color: #ccc;
+    }
     .grid {
       display: grid;
       grid-template-columns: repeat(13, 40px);
@@ -67,7 +67,6 @@
     .selected {
       outline: 2px solid white;
     }
-    
     .save-bar {
       display: flex;
       flex-direction: column;
@@ -95,6 +94,10 @@
       <select id="savedGrids" onchange="onSelectSavedGrid(this)">
         <option value="">-- Sélectionner une sauvegarde --</option>
       </select>
+      <div style="display: flex; gap: 5px;">
+        <button onclick="moveSelectedGrid(-1)">🔼</button>
+        <button onclick="moveSelectedGrid(1)">🔽</button>
+      </div>
       <button onclick="deleteGrid()">Supprimer</button>
       <button onclick="resetGrid()">Effacer</button>
     </div>
@@ -127,8 +130,6 @@
         <div class="color-dot" style="background: #8b0000;" data-color="#8b0000"></div>
         <span>All in</span>
       </div>
-    </div>
-      
     </div>
   </div>
 
@@ -185,6 +186,9 @@
     function saveGrid() {
       const name = document.getElementById('saveName').value.trim();
       if (!name) return alert('Nom invalide');
+      const order = JSON.parse(localStorage.getItem('grid-order') || '[]');
+      if (!order.includes(name)) order.push(name);
+      localStorage.setItem('grid-order', JSON.stringify(order));
 
       const cells = document.querySelectorAll('.cell');
       const data = Array.from(cells).map(c => c.style.backgroundColor);
@@ -218,6 +222,9 @@
       if (!name) return alert('Aucune sauvegarde sélectionnée');
 
       localStorage.removeItem('grid-' + name);
+      let order = JSON.parse(localStorage.getItem('grid-order') || '[]');
+      order = order.filter(item => item !== name);
+      localStorage.setItem('grid-order', JSON.stringify(order));
       updateSavedGrids();
       gridTitle.textContent = 'Aucune sauvegarde chargée';
     }
@@ -225,16 +232,40 @@
     function updateSavedGrids() {
       const select = document.getElementById('savedGrids');
       select.innerHTML = '<option value="">-- Sélectionner une sauvegarde --</option>';
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('grid-')) {
-          const name = key.substring(5);
+      const order = JSON.parse(localStorage.getItem('grid-order') || '[]');
+      order.forEach(name => {
+        if (localStorage.getItem('grid-' + name)) {
           const option = document.createElement('option');
           option.value = name;
           option.textContent = name;
           select.appendChild(option);
         }
-      }
+      });
+    }
+
+    function moveSelectedGrid(direction) {
+      const select = document.getElementById('savedGrids');
+      const selectedName = select.value;
+      if (!selectedName) return;
+      let order = JSON.parse(localStorage.getItem('grid-order') || '[]');
+      const index = order.indexOf(selectedName);
+      if (index === -1) return;
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= order.length) return;
+      const temp = order[index];
+      order[index] = order[newIndex];
+      order[newIndex] = temp;
+      localStorage.setItem('grid-order', JSON.stringify(order));
+      updateSavedGrids();
+      select.value = selectedName;
+    }
+
+    function resetGrid() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(cell => {
+        cell.style.backgroundColor = '#2c2c2c';
+      });
+      gridTitle.textContent = 'Aucune sauvegarde chargée';
     }
 
     document.body.addEventListener('mouseup', () => {
@@ -252,14 +283,6 @@
     document.querySelector('.color-dot').classList.add('selected');
     createGrid();
     updateSavedGrids();
-
-    function resetGrid() {
-      const cells = document.querySelectorAll('.cell');
-      cells.forEach(cell => {
-        cell.style.backgroundColor = '#2c2c2c';
-      });
-      gridTitle.textContent = 'Aucune sauvegarde chargée';
-    }
   </script>
 </body>
 </html>
